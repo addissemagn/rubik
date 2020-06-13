@@ -12,18 +12,12 @@ var pivot;
 var spotLight;
 var ambientLight;
 
-function render() {
-    renderer.render(scene, camera); // draw
-}
 
 // controls
 var controls = new function() {
     this.CameraPositionX = 2;
     this.CameraPositionY = 10;
     this.CameraPositionZ = 30;
-    this.SpotlightPositionX = -100;
-    this.SpotlightPositionY = 100;
-    this.SpotlightPositionZ = 200;
 }
 
 function init() {
@@ -31,6 +25,8 @@ function init() {
     var winHeight = window.innerHeight;
 
     scene = new THREE.Scene();
+    var axesHelper = new THREE.AxesHelper(5);
+    scene.add(axesHelper);
 
     var initRenderer = function() {
         renderer = new THREE.WebGLRenderer();
@@ -59,11 +55,6 @@ function init() {
         cameraFolder.add(controls, 'CameraPositionX', -100, 100);
         cameraFolder.add(controls, 'CameraPositionY', -100, 100);
         cameraFolder.add(controls, 'CameraPositionZ', -100, 100);
-
-        var spotLightFolder = gui.addFolder("Spotlight");
-        spotLightFolder.add(controls, 'SpotlightPositionX', -1000, 1000);
-        spotLightFolder.add(controls, 'SpotlightPositionY', -1000, 1000);
-        spotLightFolder.add(controls, 'SpotlightPositionZ', -1000, 1000);
     }
 
     var initLights = function() {
@@ -82,53 +73,75 @@ function init() {
     initCameraControls();
     initControls();
     initLights();
+
+    document.addEventListener( 'mousedown', onDocumentMouseDown, false  );
+
 }
 
-var group;
+var groups = {};
+var pivot;
+var topdown;
+
+var RAD_90 = Math.PI * 0.5;
+var RAD_45 = Math.PI * 0.25;
+var TEST = Math.PI * 0.1;
+
+
+var moves = {
+    // top 0 CW
+    "U": {
+        "dir": "top",
+        "layer": 0,
+        "angle": TEST 
+    },
+    // top 0 CCW
+    "U_": {
+        "dir": "top",
+        "layer": 0,
+        "angle": -1 * Math.PI / 2
+    }
+}
 
 function draw() {
     rubik = new Rubik();
 
-    var side = rubik.getSide();
-    pivot = new THREE.Group();
-    pivot.add(rubik.getSide());
+    rubik.getTopBottom();
+    sceneAdd("top");
+}
 
-    // negative of group's center
-    rubik.setSidePosition(4, -3, -5);
-    scene.add(pivot);
-
-    group = new THREE.Group();
-    var top = new THREE.Object3D();
-
+function sceneAdd(orientation) {
     for (var i = 0; i < 3; i++) {
-        for (var j = 0; j < 3; j++) {
-            top.add(rubik.getCube(i, j, 0));
-        }
+        scene.add(rubik.layers[orientation][i]);
     }
-    top.position.set(4, -3, -5);
-    group.add(top);
+}
 
-    scene.add(group);
+function onDocumentMouseDown(event) {
+    event.preventDefault();
+
+    rotate(moves.U)
+}
+
+
+//tween.start();
+function rotate(move) {
+    rubik.layers[move.dir][move.layer].rotateY(move.angle);
 }
 
 function animate() {
-    group.rotation.z += Math.PI / 2;
-    //pivot.rotation.z += 0.01;
     camera.position.set(
         controls.CameraPositionX,
         controls.CameraPositionY,
         controls.CameraPositionZ
     );
-    spotLight.position.set(
-        controls.SpotlightPositionX, 
-        controls.SpotlightPositionY, 
-        controls.SpotlightPositionZ
-    );
 
-    requestAnimationFrame(animate);
-    renderer.render(scene, camera);
+    render();
 }
 
+function render() {
+    requestAnimationFrame(animate);
+    TWEEN.update();
+    renderer.render(scene, camera); // draw
+}
 init();
 draw();
 animate();
