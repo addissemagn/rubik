@@ -21,6 +21,9 @@ var controls = new function() {
     this.CameraPositionX = 2;
     this.CameraPositionY = 10;
     this.CameraPositionZ = 30;
+    this.SpotlightPositionX = -100;
+    this.SpotlightPositionY = 100;
+    this.SpotlightPositionZ = 200;
 }
 
 function init() {
@@ -37,7 +40,7 @@ function init() {
     }
 
     var initCamera = function(x, y, z) {
-        camera = new THREE.PerspectiveCamera(45, winWidth / winHeight, 0.1, 1000);
+        camera = new THREE.PerspectiveCamera(70, winWidth / winHeight, 0.1, 1000);
         camera.position.set(x, y, z);
         camera.lookAt(scene.position);
         camera.lookAt(new THREE.Vector3(-4, 3, 5));
@@ -47,7 +50,7 @@ function init() {
     var initControls = function() {
         orbitControl = new THREE.OrbitControls(camera, renderer.domElement);
         orbitControl.addEventListener('change', render);
-        orbitControl.enableZoom = true;
+        orbitControl.enableZoom = false;
     }
 
     var initCameraControls = function() {
@@ -56,11 +59,17 @@ function init() {
         cameraFolder.add(controls, 'CameraPositionX', -100, 100);
         cameraFolder.add(controls, 'CameraPositionY', -100, 100);
         cameraFolder.add(controls, 'CameraPositionZ', -100, 100);
+
+        var spotLightFolder = gui.addFolder("Spotlight");
+        spotLightFolder.add(controls, 'SpotlightPositionX', -1000, 1000);
+        spotLightFolder.add(controls, 'SpotlightPositionY', -1000, 1000);
+        spotLightFolder.add(controls, 'SpotlightPositionZ', -1000, 1000);
     }
 
     var initLights = function() {
         spotLight = new THREE.SpotLight(0xffffff);
         spotLight.position.set(-100, 100, 200);
+        spotLight.castShadow = true;
         scene.add(spotLight);
 
         var ambiColor = "#0c0c0c";
@@ -83,6 +92,8 @@ function draw() {
     var side = rubik.getSide();
     pivot = new THREE.Group();
     pivot.add(rubik.getSide());
+
+    // negative of group's center
     rubik.setSidePosition(4, -3, -5);
     scene.add(pivot);
 
@@ -101,11 +112,18 @@ function draw() {
 }
 
 function animate() {
-    group.rotation.z += 0.01;
+    group.rotation.z += Math.PI / 2;
     //pivot.rotation.z += 0.01;
-    camera.position.x = controls.CameraPositionX;
-    camera.position.y = controls.CameraPositionY;
-    camera.position.z = controls.CameraPositionZ;
+    camera.position.set(
+        controls.CameraPositionX,
+        controls.CameraPositionY,
+        controls.CameraPositionZ
+    );
+    spotLight.position.set(
+        controls.SpotlightPositionX, 
+        controls.SpotlightPositionY, 
+        controls.SpotlightPositionZ
+    );
 
     requestAnimationFrame(animate);
     renderer.render(scene, camera);

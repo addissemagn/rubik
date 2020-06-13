@@ -64,8 +64,9 @@ class Cube {
         var margin = 0;
 
         var geo = new THREE.BoxGeometry(len, len, len);
-        var mat = new THREE.MeshBasicMaterial({
-            color: color
+        var mat = new THREE.MeshLambertMaterial({
+            color: color,
+            wireframe: false
         });
         this.cube = new THREE.Mesh(geo, mat);
 
