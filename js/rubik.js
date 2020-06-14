@@ -1,9 +1,9 @@
 var colors = {
-    "white": 0xffffff,
-    "green": 0x00ff00,
-    "red": 0xff0000,
-    "yellow": 0xf00000,
-    "orange": 0xff8c00
+    "W": 0xffffff,
+    "G": 0x00ff00,
+    "R": 0xff0000,
+    "Y": 0xf00000,
+    "O": 0xff8c00
 }
 
 var x = [-8.5, -4, 0.5];
@@ -12,22 +12,63 @@ var z = [5, 0.5, -4];
 
 class Rubik {
     constructor() {
-        var rubik = new Array();
+        this.state = {
+            currRotate: 0,
+            speed: (Math.PI/50),
+            spin: {
+                "top": {
+                    0: false,
+                    1: false,
+                    2: false
+                } 
+            }
+        };
+
+        this.rubik = new Array();
 
         for (var i = 0; i < 3; i++) {
-            rubik[i] = new Array();
+            this.rubik[i] = new Array();
             for (var j = 0; j < 3; j++) {
-                rubik[i][j] = new Array();
+                this.rubik[i][j] = new Array();
                 for (var k = 0; k < 3; k++) {
-                    var cube = new Cube(i, j, k, colors.orange);
-                    rubik[i][j][k] = cube; 
+                    var cube = new Cube(i, j, k, colors.O);
+                    this.rubik[i][j][k] = cube; 
                     scene.add(cube.cube);
                 }
             }
         }
 
-        this.rubik = rubik;
         this.layers = {};
+    }
+
+    animate() {
+        var dirs = ["top"];
+
+        if(this.state.currRotate > (Math.PI / 2)) {
+
+            for (var layer = 0; layer < 3; layer++)
+                for (var dir = 0; dir < 1; dir++)
+                    this.state.spin[dirs[dir]][layer] = false;
+        } else {
+            for (var layer = 0; layer < 3; layer++) {
+                for (var dir = 0; dir < 1; dir++) {
+                    if(this.state.spin[dirs[dir]][layer] == true) {
+                        this.rotateLayer("top", 0, this.state.speed);
+                        //this.state.currRotate += 0.01;
+                        this.state.currRotate += this.state.speed;
+                    }
+                }
+            }
+        }
+    }
+
+    rotateLayer(dir, layer, angle) {
+        if (dir == "top") 
+            this.layers[dir][layer].rotation.y += angle;
+        if (dir == "front") 
+            this.layers[dir][layer].rotation.z += angle;
+        if (dir == "left") 
+            this.layers[dir][layer].rotation.x += angle;
     }
 
     getCube(x, y, z) {

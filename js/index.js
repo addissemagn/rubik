@@ -11,22 +11,15 @@ var light;
 var pivot;
 var spotLight;
 var ambientLight;
-
-
-// controls
-var controls = new function() {
-    this.CameraPositionX = 2;
-    this.CameraPositionY = 10;
-    this.CameraPositionZ = 30;
-}
+var controls;
 
 function init() {
     var winWidth = window.innerWidth;
     var winHeight = window.innerHeight;
 
     scene = new THREE.Scene();
-    var axesHelper = new THREE.AxesHelper(5);
-    scene.add(axesHelper);
+    //var axesHelper = new THREE.AxesHelper(5);
+    //scene.add(axesHelper);
 
     var initRenderer = function() {
         renderer = new THREE.WebGLRenderer();
@@ -50,6 +43,11 @@ function init() {
     }
 
     var initCameraControls = function() {
+        controls = new function() {
+            this.CameraPositionX = 2;
+            this.CameraPositionY = 10;
+            this.CameraPositionZ = 30;
+        }
         var gui = new dat.GUI();
         var cameraFolder = gui.addFolder("Camera");
         cameraFolder.add(controls, 'CameraPositionX', -100, 100);
@@ -74,11 +72,9 @@ function init() {
     initControls();
     initLights();
 
-    document.addEventListener( 'mousedown', onDocumentMouseDown, false  );
-
+    document.addEventListener('mousedown', onDocumentMouseDown, false);
 }
 
-var groups = {};
 var pivot;
 var topdown;
 
@@ -86,27 +82,41 @@ var RAD_90 = Math.PI * 0.5;
 var RAD_45 = Math.PI * 0.25;
 var TEST = Math.PI * 0.1;
 
+var CW = -1 * TEST;
+var CCW = TEST;
 
 var moves = {
     // top 0 CW
     "U": {
         "dir": "top",
         "layer": 0,
-        "angle": TEST 
+        "angle": CW
     },
     // top 0 CCW
-    "U_": {
+    "Ur": {
         "dir": "top",
         "layer": 0,
-        "angle": -1 * Math.PI / 2
+        "angle": CCW
+    },
+    "D": {
+        "dir": "top",
+        "layer": 2,
+        "angle": CW
+    },
+    "Dr": {
+        "dir": "top",
+        "layer": 2,
+        "angle": CCW
     }
 }
 
+var group;
 function draw() {
     rubik = new Rubik();
 
     rubik.getTopBottom();
     sceneAdd("top");
+    group = rubik.layers["top"][0];
 }
 
 function sceneAdd(orientation) {
@@ -117,8 +127,19 @@ function sceneAdd(orientation) {
 
 function onDocumentMouseDown(event) {
     event.preventDefault();
+    //    new TWEEN.Tween( rubik.layers["top"][0].rotation  )
+    //.to( {  y:  rubik.layers["top"][0].rotation.y + RAD_90 }, 1000  )
+    //.easing( TWEEN.Easing.Quadratic.EaseOut )
+    //.start();
 
-    rotate(moves.U)
+    //rotate(moves.U)
+    //rotate(moves.Dr)
+    if(rubik.state.spin["top"][0] == false) {
+        rubik.state.spin["top"][0] = true;
+        rubik.state.currRotate = 0;
+
+    }
+
 }
 
 
@@ -128,6 +149,9 @@ function rotate(move) {
 }
 
 function animate() {
+
+    rubik.animate();
+
     camera.position.set(
         controls.CameraPositionX,
         controls.CameraPositionY,
@@ -142,6 +166,7 @@ function render() {
     TWEEN.update();
     renderer.render(scene, camera); // draw
 }
+
 init();
 draw();
 animate();
