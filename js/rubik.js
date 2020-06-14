@@ -1,3 +1,10 @@
+// process:
+// initially i make the whole group and show it
+// say i wanna rotate Up or Down
+// then i need to make the Up or Down groups
+// rotate the one wanted
+// ! is this needed or can i just restart the process -> dismantle the up/down groups
+
 var colors = {
     "W": 0xffffff,
     "G": 0x00ff00,
@@ -10,19 +17,56 @@ var x = [-8.5, -4, 0.5];
 var y = [7.5, 3, -1.5];
 var z = [5, 0.5, -4];
 
+// F, Fr - front
+// B, Br - back
+// U, Ur - up
+// D, Dr - down
+// L, Lr - left
+// R, Rr - right
+
 class Rubik {
     constructor() {
         this.state = {
-            currRotate: 0,
+            currAngle: 0,
             speed: (Math.PI/50),
             spin: {
                 "top": {
                     0: false,
                     1: false,
                     2: false
+                },
+                "left": {
+                    0: false,
+                    1: false,
+                    2: false
+                },
+                "front": {
+                    0: false,
+                    1: false,
+                    2: false
                 } 
-            }
+            },
         };
+
+        this.makeFace = {};
+
+        this.center = {
+            "top": { // y
+                "x": 4,
+                "y": -3,
+                "z": -0.5
+            },
+            "left": { // x
+                "x": 4,
+                "y": -3,
+                "z": -0.5
+            },
+            "front" : { // z
+                "x": 4,
+                "y": -3,
+                "z": -0.5
+            }
+        }
 
         this.rubik = new Array();
 
@@ -39,23 +83,38 @@ class Rubik {
         }
 
         this.layers = {};
+
+        // TODO: reevaluate
+        this.makeFace["top"] = this.getTopBottom;
+        this.makeFace["front"] = this.getFrontBack;
+        this.makeFace["left"] = this.getLeftRight;
+    }
+
+    // if layer not already rotating, initiate rotation
+    makeMove(move) {
+        if(this.state.spin[move.dir][move.layer] == false) {
+            this.state.spin[move.dir][move.layer] = true;
+            this.state.currAngle = 0;
+        }
     }
 
     animate() {
-        var dirs = ["top"];
+        var dirs = ["top", "left", "front"];
 
-        if(this.state.currRotate > (Math.PI / 2)) {
-
+        // stop rotation after 90deg
+        if(this.state.currAngle > (Math.PI / 2)) {
             for (var layer = 0; layer < 3; layer++)
-                for (var dir = 0; dir < 1; dir++)
-                    this.state.spin[dirs[dir]][layer] = false;
-        } else {
+                for (var i = 0; i < 1; i++) {
+                    this.state.spin[dirs[i]][layer] = false;
+                    //rotationReset();
+                }
+        } else { // rotate 90deg
             for (var layer = 0; layer < 3; layer++) {
-                for (var dir = 0; dir < 1; dir++) {
-                    if(this.state.spin[dirs[dir]][layer] == true) {
-                        this.rotateLayer("top", 0, this.state.speed);
-                        //this.state.currRotate += 0.01;
-                        this.state.currRotate += this.state.speed;
+                for (var i = 0; i < 3; i++) {
+                    if(this.state.spin[dirs[i]][layer] == true) {
+                        console.log("hello");
+                        this.rotateLayer(dirs[i], layer, this.state.speed);
+                        this.state.currAngle += this.state.speed;
                     }
                 }
             }
@@ -65,10 +124,17 @@ class Rubik {
     rotateLayer(dir, layer, angle) {
         if (dir == "top") 
             this.layers[dir][layer].rotation.y += angle;
-        if (dir == "front") 
+        else if (dir == "front") 
             this.layers[dir][layer].rotation.z += angle;
-        if (dir == "left") 
+        else if (dir == "left") 
             this.layers[dir][layer].rotation.x += angle;
+    }
+
+    rotationReset() {
+        for (var i = 0; i < 3; i++)
+            for (var j = 0; j < 3; j++)
+                for (var k = 0; k < 3; k++)
+                    this.cube.rotation.set(0, 0, 0);
     }
 
     getCube(x, y, z) {
@@ -90,87 +156,25 @@ class Rubik {
         this.layers["whole"].add(side);
     } 
 
-    // actually z axis
-    getFrontBack() {
-        this.layers["front"] = {};
-
-        var l1 = new THREE.Object3D();
-        var l2 = new THREE.Object3D();
-        var l3 = new THREE.Object3D();
-
-        for (var i = 0; i < 3; i++) {
-            for (var j = 0; j < 3; j++) {
-                l1.add(this.getCube(i, j, 0));
-                l2.add(this.getCube(i, j, 1));
-                l3.add(this.getCube(i, j, 2));
-            }
-        }
-
-        l1.position.set(4, -3, -5);
-        l2.position.set(4, -3, -5);
-        l3.position.set(4, -3, -5);
-
-        this.layers["front"]["1"] = new THREE.Group();
-        this.layers["front"]["2"] = new THREE.Group();
-        this.layers["front"]["3"] = new THREE.Group();
-
-        this.layers["front"]["1"].add(l1);
-        this.layers["front"]["2"].add(l2);
-        this.layers["front"]["3"].add(l3);
-    }
-
-    getLayers(dir = "top", x, y, z) {
-        // top: x=i, y=LAY; z=j
-        // negative of group's center
-        var centers = {
-            "top": {
-                "x": 4,
-                "y": -3,
-                "z": -0.5
-            }
-        }
-
+    makeLayers(dir) {
         this.layers[dir] = new Array();
         var l = new Array(); // each layer
 
         for (var i = 0; i < 3; i++) {
             l[i] = new THREE.Object3D();
-            l[i].position.set(center.dir.x, center.dir.y, center.dir.z);
+            l[i].position.set(this.center[dir].x, this.center[dir].y, this.center[dir].z);
         }
 
         for (var i = 0; i < 3; i++)
             for (var j = 0; j < 3; j++)
-                for (var LAY = 0; LAY < 3; LAY++) // layer; i & j are the plane
-                    l[LAY].add(this.getCube(i, LAY, j));
-
-        for (var i = 0; i < 3; i++) {
-            this.layers[dir][i] = new THREE.Group();
-            this.layers[dir][i].add(l[i]);
-        }
-    }
-    // y axis
-    getTopBottom() {
-        var dir = "top";
-
-        // negative of group's center
-        var center = {
-            "x": 4,
-            "y": -3,
-            "z": -0.5
-        }
-
-        this.layers[dir] = new Array();
-        var l = new Array(); // each layer
-
-        for (var i = 0; i < 3; i++) {
-            l[i] = new THREE.Object3D();
-            l[i].position.set(center.x, center.y, center.z);
-        }
-
-        for (var i = 0; i < 3; i++)
-            for (var j = 0; j < 3; j++)
-                for (var LAY = 0; LAY < 3; LAY++) // layer; i & j are the plane
-                    l[LAY].add(this.getCube(i, LAY, j));
+                for (var LAY = 0; LAY < 3; LAY++) { // i & j are the plane cords, LAY is layer
+                    if (dir == "left") // x axis
+                        l[LAY].add(this.getCube(LAY, i, j));
+                    else if (dir == "top") // y axix
+                        l[LAY].add(this.getCube(i, LAY, j));
+                    else if (dir == "front") // z axis
+                        l[LAY].add(this.getCube(i, j, LAY));
+                }
 
         this.group = l[0];
 
@@ -179,37 +183,6 @@ class Rubik {
             this.layers[dir][i].add(l[i]);
         }
     }
-
-    // x axis
-    getLeftRight() {
-        this.layers["left"] = {};
-
-        var l1 = new THREE.Object3D();
-        var l2 = new THREE.Object3D();
-        var l3 = new THREE.Object3D();
-
-        for (var i = 0; i < 3; i++) {
-            for (var j = 0; j < 3; j++) {
-                l1.add(this.getCube(0, i, j));
-                l2.add(this.getCube(1, i, j));
-                l3.add(this.getCube(2, i, j));
-            }
-        }
-
-        // negative of groups center
-        l1.position.set(4, -3, -0.5);
-        l2.position.set(4, -3, -0.5);
-        l3.position.set(4, -3, -0.5);
-
-        this.layers["left"]["1"] = new THREE.Group();
-        this.layers["left"]["2"] = new THREE.Group();
-        this.layers["left"]["3"] = new THREE.Group();
-
-        this.layers["left"]["1"].add(l1);
-        this.layers["left"]["2"].add(l2);
-        this.layers["left"]["3"].add(l3);
-    }
-
 }
 
 class Cube {
@@ -217,9 +190,6 @@ class Cube {
     constructor(dx, dy, dz, color) {
         var len = 4;
 
-        //var x = -8.5;
-        //var y = 7.5;
-        //var z = 5;
         var diff = 4;
         var margin = 0;
 

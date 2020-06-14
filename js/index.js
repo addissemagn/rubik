@@ -29,7 +29,7 @@ function init() {
     }
 
     var initCamera = function(x, y, z) {
-        camera = new THREE.PerspectiveCamera(70, winWidth / winHeight, 0.1, 1000);
+        camera = new THREE.PerspectiveCamera(75, winWidth / winHeight, 0.1, 1000);
         camera.position.set(x, y, z);
         camera.lookAt(scene.position);
         camera.lookAt(new THREE.Vector3(-4, 3, 5));
@@ -72,7 +72,8 @@ function init() {
     initControls();
     initLights();
 
-    document.addEventListener('mousedown', onDocumentMouseDown, false);
+    //document.addEventListener('mousedown', onDocumentMouseDown, false);
+    document.addEventListener("keydown", onDocumentKeyDown, false);
 }
 
 var pivot;
@@ -107,6 +108,26 @@ var moves = {
         "dir": "top",
         "layer": 2,
         "angle": CCW
+    },
+    "L": {
+        "dir": "left",
+        "layer": 0,
+        "angle": CW
+    },
+    "R": {
+        "dir": "left",
+        "layer": 2,
+        "angle": CW
+    },
+    "F": {
+        "dir": "front",
+        "layer": 0,
+        "angle": CW
+    },
+    "B": {
+        "dir": "front",
+        "layer": 2,
+        "angle": CW
     }
 }
 
@@ -114,9 +135,8 @@ var group;
 function draw() {
     rubik = new Rubik();
 
-    rubik.getTopBottom();
-    sceneAdd("top");
-    group = rubik.layers["top"][0];
+    rubik.getWhole();
+    showCube();
 }
 
 function sceneAdd(orientation) {
@@ -125,23 +145,52 @@ function sceneAdd(orientation) {
     }
 }
 
-function onDocumentMouseDown(event) {
-    event.preventDefault();
-    //    new TWEEN.Tween( rubik.layers["top"][0].rotation  )
-    //.to( {  y:  rubik.layers["top"][0].rotation.y + RAD_90 }, 1000  )
-    //.easing( TWEEN.Easing.Quadratic.EaseOut )
-    //.start();
+function onDocumentKeyDown(event) {
+    var keyCode = event.which;
 
-    //rotate(moves.U)
-    //rotate(moves.Dr)
-    if(rubik.state.spin["top"][0] == false) {
-        rubik.state.spin["top"][0] = true;
-        rubik.state.currRotate = 0;
+    // make top/bottom layers
+    if(keyCode == 85 || keyCode == 68) {
+        //clearScene();
+        rubik.makeLayers("top");
+        sceneAdd("top");
 
+        if(keyCode == 85) { // u
+            rubik.makeMove(moves.U);
+        } else if (keyCode == 68) { // d
+            rubik.makeMove(moves.D);
+        }
+    } else if(keyCode == 16 || keyCode == 82) {
+        //clearScene();
+        rubik.makeLayers("left");
+        sceneAdd("left");
+
+        if(keyCode == 16) { // l
+            rubik.makeMove(moves.L);
+        } else if (keyCode == 82) { // r
+            rubik.makeMove(moves.R);
+        }
+    } else if(keyCode == 70 || keyCode == 66) {
+        //clearScene();
+        rubik.makeLayers("front");
+        sceneAdd("front");
+
+        if(keyCode == 70) { // f
+            rubik.makeMove(moves.F);
+        } else if (keyCode == 66) { // b
+            rubik.makeMove(moves.B);
+        } 
     }
+};
 
+function showCube() {
+    scene.add(rubik.layers["whole"]);
 }
 
+function clearScene() {
+    while(scene.children.length > 0){ 
+        scene.remove(scene.children[0]); 
+    }
+}
 
 //tween.start();
 function rotate(move) {
@@ -149,7 +198,6 @@ function rotate(move) {
 }
 
 function animate() {
-
     rubik.animate();
 
     camera.position.set(
@@ -163,7 +211,6 @@ function animate() {
 
 function render() {
     requestAnimationFrame(animate);
-    TWEEN.update();
     renderer.render(scene, camera); // draw
 }
 
