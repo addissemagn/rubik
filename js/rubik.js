@@ -1,21 +1,5 @@
-// process:
-// initially i make the whole group and show it
-// say i wanna rotate Up or Down
-// then i need to make the Up or Down groups
-// rotate the one wanted
-// ! is this needed or can i just restart the process -> dismantle the up/down groups
-
-var colors = {
-    "W": 0xffffff,
-    "G": 0x00ff00,
-    "R": 0xff0000,
-    "Y": 0xf00000,
-    "O": 0xff8c00
-}
-
-var x = [-8.5, -4, 0.5];
-var y = [7.5, 3, -1.5];
-var z = [5, 0.5, -4];
+// TODO:
+// - dismantle groups without removing cube from scene
 
 // F, Fr - front
 // B, Br - back
@@ -28,7 +12,7 @@ class Rubik {
     constructor() {
         this.state = {
             currAngle: 0,
-            speed: (Math.PI/50),
+            speed: (Math.PI/50), // rotation speed
             spin: {
                 "top": {
                     0: false,
@@ -48,93 +32,145 @@ class Rubik {
             },
         };
 
-        this.makeFace = {};
+        this.solve = false;
 
+        // center of rubik's cube
         this.center = {
-            "top": { // y
-                "x": 4,
-                "y": -3,
-                "z": -0.5
-            },
-            "left": { // x
-                "x": 4,
-                "y": -3,
-                "z": -0.5
-            },
-            "front" : { // z
-                "x": 4,
-                "y": -3,
-                "z": -0.5
-            }
+            "x": -4,
+            "y": 3,
+            "z": 0.5
         }
 
+        var cubeDim = 1; // side length of each cube
+        var x = [this.center.x - cubeDim, this.center.x, this.center.x + cubeDim];
+        var y = [this.center.y + cubeDim, this.center.y, this.center.y - cubeDim];
+        var z = [this.center.z + cubeDim, this.center.z, this.center.z - cubeDim]
+
         this.rubik = new Array();
+
+        // pivot for cube to rotate about
+        var pivot = new THREE.Group();
+        pivot.position.set(-1*this.center.x, -1*this.center.y, -1*this.center.z);
+        scene.add(pivot);
 
         for (var i = 0; i < 3; i++) {
             this.rubik[i] = new Array();
             for (var j = 0; j < 3; j++) {
                 this.rubik[i][j] = new Array();
                 for (var k = 0; k < 3; k++) {
-                    var cube = new Cube(i, j, k, colors.O);
+                    var cube = new Cube(x[i], y[j], z[k], cubeDim);
                     this.rubik[i][j][k] = cube; 
                     scene.add(cube.cube);
+                    pivot.add(cube.cube)
                 }
             }
         }
 
         this.layers = {};
 
-        // TODO: reevaluate
-        this.makeFace["top"] = this.getTopBottom;
-        this.makeFace["front"] = this.getFrontBack;
-        this.makeFace["left"] = this.getLeftRight;
+        this.activeCubes = new Array();
+
+
+        this.dirr = 1; // for CW vs CCW for solving
     }
 
-    // if layer not already rotating, initiate rotation
-    makeMove(move) {
-        if(this.state.spin[move.dir][move.layer] == false) {
-            this.state.spin[move.dir][move.layer] = true;
+    makeLayer(dir, level) {
+        this.currDir = dir;
+        this.currLevel = level;
+
+        var side = new THREE.Object3D();
+        //side.position.set(-1*this.center.x, -1*this.center.y, -1*this.center.z);
+        //side.rotation.set(0, 0, 0);
+        side.updateMatrixWorld();
+
+        for (var i = 0; i < 3; i++) {
+            for (var j = 0; j < 3; j++) {
+                var coords;
+
+                if(dir == "left")
+                    coords = [level, i, j];
+                else if (dir == "top")
+                    coords = [i, level, j];
+                else if (dir == "front")
+                    coords = [i, j, level];
+
+                var cube = this.getCube(coords[0], coords[1], coords[2]);
+                this.activeCubes.push(cube);
+                side.attach(cube); // add cubes in this level to group
+            }
+        }
+
+        //this.currLayer = new THREE.Group();
+        //this.currLayer.add(side);
+
+        this.currLayer = side;
+    }
+
+    dissolveLayer() {
+        if(this.currLayer != null) {
+            this.currLayer.updateMatrixWorld();
+
+            while(this.activeCubes.length > 0) {
+                var cube = this.activeCubes.pop();
+                scene.attach(cube);
+            }
+        }
+    }
+
+    // init var to move and currAngle
+    moveCurr() {
+        if(this.state.spin[this.currDir][this.currLevel] == false) { 
+            this.state.spin[this.currDir][this.currLevel] = true;
             this.state.currAngle = 0;
         }
     }
 
+    // rotate whatever curr layer it is based on it's axis
+    rotateCurrLayer() {
+        if (this.currDir == "top") 
+            this.currLayer.rotation.y += (this.state.speed * this.dirr);
+        else if (this.currDir == "front") 
+            this.currLayer.rotation.z += (this.state.speed * this.dirr);
+        else if (this.currDir == "left") 
+            this.currLayer.rotation.x += (this.state.speed * this.dirr);
+    }
+
+    solveNext() {
+        if(keysPressed.length > 0) {
+            var curr = keysPressed.shift(); // remove first in array
+            console.log(curr);
+            this.makeLayer(mapping[curr].dir, mapping[curr].layer)
+            scene.add(this.currLayer);
+            this.moveCurr();
+
+            this.dirr = -1;
+        }
+    }
+
+    // layer rotation animation
     animate() {
         var dirs = ["top", "left", "front"];
 
         // stop rotation after 90deg
         if(this.state.currAngle > (Math.PI / 2)) {
             for (var layer = 0; layer < 3; layer++)
-                for (var i = 0; i < 1; i++) {
+                for (var i = 0; i < dirs.length; i++) {
                     this.state.spin[dirs[i]][layer] = false;
-                    //rotationReset();
+
+                    if(this.solve == true)
+                        this.solveNext();
                 }
         } else { // rotate 90deg
             for (var layer = 0; layer < 3; layer++) {
-                for (var i = 0; i < 3; i++) {
+                for (var i = 0; i < dirs.length; i++) {
                     if(this.state.spin[dirs[i]][layer] == true) {
                         console.log("hello");
-                        this.rotateLayer(dirs[i], layer, this.state.speed);
+                        this.rotateCurrLayer();
                         this.state.currAngle += this.state.speed;
                     }
                 }
             }
         }
-    }
-
-    rotateLayer(dir, layer, angle) {
-        if (dir == "top") 
-            this.layers[dir][layer].rotation.y += angle;
-        else if (dir == "front") 
-            this.layers[dir][layer].rotation.z += angle;
-        else if (dir == "left") 
-            this.layers[dir][layer].rotation.x += angle;
-    }
-
-    rotationReset() {
-        for (var i = 0; i < 3; i++)
-            for (var j = 0; j < 3; j++)
-                for (var k = 0; k < 3; k++)
-                    this.cube.rotation.set(0, 0, 0);
     }
 
     getCube(x, y, z) {
@@ -145,7 +181,6 @@ class Rubik {
         this.layers["whole"] = new THREE.Group();
         var side = new THREE.Object3D();
 
-
         for (var i = 0; i < 3; i++)
             for (var j = 0; j < 3; j++)
                 for (var k = 0; k < 3; k++)
@@ -155,56 +190,76 @@ class Rubik {
         side.position.set(4, -3, -5);
         this.layers["whole"].add(side);
     } 
-
-    makeLayers(dir) {
-        this.layers[dir] = new Array();
-        var l = new Array(); // each layer
-
-        for (var i = 0; i < 3; i++) {
-            l[i] = new THREE.Object3D();
-            l[i].position.set(this.center[dir].x, this.center[dir].y, this.center[dir].z);
-        }
-
-        for (var i = 0; i < 3; i++)
-            for (var j = 0; j < 3; j++)
-                for (var LAY = 0; LAY < 3; LAY++) { // i & j are the plane cords, LAY is layer
-                    if (dir == "left") // x axis
-                        l[LAY].add(this.getCube(LAY, i, j));
-                    else if (dir == "top") // y axix
-                        l[LAY].add(this.getCube(i, LAY, j));
-                    else if (dir == "front") // z axis
-                        l[LAY].add(this.getCube(i, j, LAY));
-                }
-
-        this.group = l[0];
-
-        for (var i = 0; i < 3; i++) {
-            this.layers[dir][i] = new THREE.Group();
-            this.layers[dir][i].add(l[i]);
-        }
-    }
 }
 
 class Cube {
-    // create and draw box
-    constructor(dx, dy, dz, color) {
-        var len = 4;
+    constructor(x, y, z, dim) {
+        var col = {
+            "W": 0xf7fbff,
+            "G": 0x00ae69,
+            "R": 0xee4d49,
+            "Y": 0xffd21b,
+            "O": 0xeb7324,
+            "B": 0x6d9ad3,
+            "Bl": 0x242423
+        }
 
-        var diff = 4;
-        var margin = 0;
+        var col1 = {
+            "W": 0xffffff,
+            "G": 0x52b54a,
+            "R": 0xc63029,
+            "Y": 0xfff600,
+            "O": 0xf17022,
+            "B": 0x0363ae,
+            "Bl": 0x242423
+        }
 
-        var geo = new THREE.BoxGeometry(len, len, len);
-        var mat = new THREE.MeshLambertMaterial({
-            color: color,
-            wireframe: false
-        });
-        this.cube = new THREE.Mesh(geo, mat);
+        var col2 = {
+            "W": 0xf9f9f9,
+            "G": 0x82c91e,
+            "R": 0xf25529,
+            "Y": 0xecc504,
+            "O": 0xfd8002,
+            "B": 0x35a8bd,
+            "Bl": 0x000000
+        }
 
-        this.cube.position.set(x[dx], y[dy], z[dz]);
-        //this.cube.position.set(x + (dx*diff + margin), y - (dy*diff + margin), z);
+        var colors = [col.B, col.G, col.W, col.Y, col.R, col.O];
+        var materials = new Array();
+
+        for (var i = 0; i < 6; i++) {
+            materials[i] = this.makeMaterial(colors[i]); // make materials for each face
+        }
+
+        var geometry = new THREE.BoxBufferGeometry(dim, dim, dim);
+
+        this.cube = new THREE.Mesh(geometry, materials);
+        this.cube.position.set(x, y, z);
         this.cube.rotation.set(0, 0, 0);
         this.cube.castShadow = true;
         this.cube.receiveShadow = true;
+
+        // wireframe
+        var geo = new THREE.EdgesGeometry(this.cube.geometry);
+        var mat = new THREE.LineBasicMaterial({ 
+            color: 0x000000, 
+            linewidth: 1
+        });
+        var wireframe = new THREE.LineSegments(geo, mat);
+        wireframe.renderOrder = 1; // make sure wireframes are rendered 2nd
+        this.cube.add(wireframe);
+    }
+
+    makeMaterial(color) {
+        var boxMat = new THREE.MeshBasicMaterial({ 
+            color: color, 
+            flatShading: true,
+            side: THREE.DoubleSide
+        });
+
+        //mat.color.convertSRGBToLinear();
+        return boxMat;
+
     }
 
     show() {
@@ -215,4 +270,5 @@ class Cube {
         return this.cube;
     }
 }
+
 

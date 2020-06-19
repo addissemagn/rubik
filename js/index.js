@@ -10,36 +10,55 @@ var cube;
 var light;
 var pivot;
 var spotLight;
-var ambientLight;
 var controls;
+var mainLight;
+var keysPressed = [];
+var bgColor;
 
 function init() {
     var winWidth = window.innerWidth;
     var winHeight = window.innerHeight;
 
     scene = new THREE.Scene();
-    //var axesHelper = new THREE.AxesHelper(5);
-    //scene.add(axesHelper);
+    bgColor = 0x73ccd7;
+    var bgColor1 = 0x242423;
+    var bgColor2 = 0x085c76;
+
+    scene.background = new THREE.Color(bgColor);
 
     var initRenderer = function() {
-        renderer = new THREE.WebGLRenderer();
-        renderer.setClearColor(0xEEEEEE);
+        renderer = new THREE.WebGLRenderer({
+            antialias: true
+        });
+
         renderer.setSize(winWidth, winHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.gammaFactor = 2.2;
+        renderer.gammaOutpu = true;
+        renderer.physicallyCorrectLights = true;
         document.body.appendChild(renderer.domElement);
     }
 
     var initCamera = function(x, y, z) {
-        camera = new THREE.PerspectiveCamera(75, winWidth / winHeight, 0.1, 1000);
+        const fov = 20; // field of view; lower = closer
+        const aspect = winWidth / winHeight;
+        const near = 0.1;
+        const far = 1000;
+
+        camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
         camera.position.set(x, y, z);
-        camera.lookAt(scene.position);
+        //camera.lookAt(scene.position);
         camera.lookAt(new THREE.Vector3(-4, 3, 5));
         scene.add(camera);
     }
 
     var initControls = function() {
         orbitControl = new THREE.OrbitControls(camera, renderer.domElement);
-        orbitControl.addEventListener('change', render);
-        orbitControl.enableZoom = false;
+        //orbitControl.update()
+        orbitControl.enableDamping = true;
+        orbitControl.dampingFactor = 0.0;
+        orbitControl.rotateSpeed = 0.5;
+        orbitControl.enableZoom = true;
     }
 
     var initCameraControls = function() {
@@ -56,14 +75,14 @@ function init() {
     }
 
     var initLights = function() {
-        spotLight = new THREE.SpotLight(0xffffff);
-        spotLight.position.set(-100, 100, 200);
-        spotLight.castShadow = true;
-        scene.add(spotLight);
+        var ambientLight = new THREE.AmbientLight(0xddeeff, 0x202020, 9);
+        //var ambientLight2 = new THREE.AmbientLight(0xf1a4ff, 0.2)
 
-        var ambiColor = "#0c0c0c";
-        ambientLight = new THREE.AmbientLight(ambiColor);
         scene.add(ambientLight);
+
+        mainLight = new THREE.DirectionalLight(0xffffff, 3.0);
+        mainLight.position.set(10, 10, 10);
+        scene.add(ambientLight, mainLight);
     }
 
     initRenderer();
@@ -73,10 +92,16 @@ function init() {
     initLights();
 
     //document.addEventListener('mousedown', onDocumentMouseDown, false);
+    document.addEventListener('resize', onWindowResize, false);
     document.addEventListener("keydown", onDocumentKeyDown, false);
 }
 
-var pivot;
+function onWindowResize() {
+    camera.aspect = winWidth / winHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(winWidth, winHeight);
+}
+
 var topdown;
 
 var RAD_90 = Math.PI * 0.5;
@@ -131,12 +156,8 @@ var moves = {
     }
 }
 
-var group;
 function draw() {
     rubik = new Rubik();
-
-    rubik.getWhole();
-    showCube();
 }
 
 function sceneAdd(orientation) {
@@ -145,45 +166,130 @@ function sceneAdd(orientation) {
     }
 }
 
+var prevKey;
+var currKey;
+
+
+var mapping = {
+    "u": {
+        "dir": "top",
+        "layer": 0
+    },
+    "d": {
+        "dir": "top",
+        "layer": 2
+    },
+    "l": {
+        "dir": "left",
+        "layer": 0
+    },
+    "r": {
+        "dir": "left",
+        "layer": 2
+    },
+    "f": {
+        "dir": "front",
+        "layer": 0
+    },
+    "b": {
+        "dir": "front",
+        "layer": 2
+    }
+}
+
 function onDocumentKeyDown(event) {
     var keyCode = event.which;
-
-    // make top/bottom layers
-    if(keyCode == 85 || keyCode == 68) {
-        //clearScene();
-        rubik.makeLayers("top");
-        sceneAdd("top");
-
-        if(keyCode == 85) { // u
-            rubik.makeMove(moves.U);
-        } else if (keyCode == 68) { // d
-            rubik.makeMove(moves.D);
-        }
-    } else if(keyCode == 16 || keyCode == 82) {
-        //clearScene();
-        rubik.makeLayers("left");
-        sceneAdd("left");
-
-        if(keyCode == 16) { // l
-            rubik.makeMove(moves.L);
-        } else if (keyCode == 82) { // r
-            rubik.makeMove(moves.R);
-        }
-    } else if(keyCode == 70 || keyCode == 66) {
-        //clearScene();
-        rubik.makeLayers("front");
-        sceneAdd("front");
-
-        if(keyCode == 70) { // f
-            rubik.makeMove(moves.F);
-        } else if (keyCode == 66) { // b
-            rubik.makeMove(moves.B);
-        } 
+    var key = {
+        "85": "u",
+        "68": "d",
+        "76": "l",
+        "82": "r",
+        "70": "f",
+        "66": "b",
+        "187": "solve"
     }
-};
 
+
+
+    // if key is valid
+    if (key[keyCode] != undefined) {
+    
+        var letter = key[keyCode];
+
+
+        if(!rubik.solve && letter == "solve")
+            rubik.solve = true;
+
+        if(rubik.solve) {
+            rubik.solveNext();
+        } else {
+            // add to beginning of array
+            keysPressed.unshift(letter);
+
+            // if first key or if new key, make layer
+            if (keysPressed.length == 1 ||
+                (keysPressed.length > 1 && keysPressed[0] != keysPressed[1])) {
+                rubik.dissolveLayer();
+                rubik.makeLayer(mapping[letter].dir, mapping[letter].layer)
+                scene.add(rubik.currLayer);
+            }
+
+            rubik.moveCurr();
+        }
+
+    }
+
+    console.log(key[keyCode]);
+
+    if(false) {
+
+        // make top/bottom layers
+        if(keyCode == 85 || keyCode == 68) {
+            //clearScene();
+            //rubik.makeLayers("top");
+            //sceneAdd("top");
+
+            rubik.makeLayer("top", 0);
+            scene.add(rubik.currLayer);
+        
+            if(keyCode == 85) { // u 
+                //rubik.rotateCurr();
+                rubik.moveCurr();
+
+
+                //rubik.makeMove(moves.U);
+            } else if (keyCode == 68) { // d
+                rubik.makeMove(moves.D);
+            }
+        } else if(keyCode == 76 || keyCode == 82) {
+            //clearScene();
+            rubik.makeLayers("left");
+            sceneAdd("left");
+
+            if(keyCode == 76) { // l
+                rubik.makeMove(moves.L);
+            } else if (keyCode == 82) { // r
+                rubik.makeMove(moves.R);
+            }
+        } else if(keyCode == 70 || keyCode == 66) {
+            //clearScene();
+            rubik.makeLayers("front");
+            sceneAdd("front");
+
+            if(keyCode == 70) { // f
+                rubik.makeMove(moves.F);
+            } else if (keyCode == 66) { // b
+                rubik.makeMove(moves.B);
+            } 
+        }
+    }
+}
+// show rubik's cube
 function showCube() {
-    scene.add(rubik.layers["whole"]);
+    for (var i = 0; i < 3; i++)
+        for (var j = 0; j < 3; j++)
+            for (var k = 0; k < 3; k++)
+                scene.add(rubik.getCube(i, j, k));
 }
 
 function clearScene() {
@@ -206,11 +312,12 @@ function animate() {
         controls.CameraPositionZ
     );
 
+    requestAnimationFrame(animate);
     render();
 }
 
 function render() {
-    requestAnimationFrame(animate);
+    orbitControl.update();
     renderer.render(scene, camera); // draw
 }
 
