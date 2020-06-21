@@ -3,19 +3,34 @@
     <head>
         <meta charset="utf-8">
         <title>Rubik's Cube</title>
-        <style>
-body { margin: 0;  }
-canvas { display: block;  }
-        </style>
-    </head>
-    <body>
+        <link rel="icon" href="favicon.png" type="image/png">
+        <link rel="stylesheet" type="text/css" href="src/css/index.css">
+
         <script src="https://threejs.org/build/three.js"></script>
+        <script src="src/js/threex.dynamictexture.js"></script>
         <script src="https://dl.dropboxusercontent.com/s/jljnyugwrrk4gss/OrbitControls.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.5.1/dat.gui.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/es6-tween/5.5.11/Tween.min.js"></script>
         <script src="https://code.jquery.com/jquery-2.2.4.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
-        <script src="js/rubik.js"></script>
-        <script src="js/index.js"></script>
+
+
+    </head>
+    <body>
+
+        <!--TODO: add selector for diff sizes?-->
+        <!--TODO: add instructions -->
+        <div class="bu">
+            <button>New</button>
+            <button onClick="shuffle()">Shuffle</button>
+            <button onClick="solve()">Solve</button>
+            <button>Undo</button>
+        </div>
+
+        <script src="src/js/buttonHandler.js"></script>
+        <script src="src/js/keyboardHandler.js"></script>
+        <script src="src/js/cube.js"></script>
+        <script src="src/js/rubik.js"></script>
+        <script src="src/js/index.js"></script>
     </body>
 </html>
 

@@ -1,0 +1,52 @@
+@import 'https://fonts.googleapis.com/css?family=Rubik+One';
+
+body {
+    margin: 0;
+    overflow: hidden;
+    background-color: #73ccd7; /* same as scene background */
+    cursor: pointer;
+    font-family: 'Ubuntu', sans-serif;
+}
+
+div.bu {
+    /*text-align: center;*/
+    over-flow: hidden;
+    height: 40px;
+    margin: 10px 0px;
+    line-height: 40px;
+
+    user-select: none;
+    -moz-user-select: none;
+    -khtml-user-select: none;
+    -webkit-user-select: none;
+    -o-user-select: none;
+}
+
+button, .radius {
+    -webkit-transition: all .1s ease-in-out;
+    -moz-transition: all .1s ease-in-out;
+    transition: all .1s ease-in-out;
+    margin-left: 8px;  
+}
+
+div.bu button{
+    /*width: 100px;*/
+    padding: 7px 20px;
+
+    letter-spacing: 1px;
+    font-size: 12px;
+    text-transform: uppercase;
+    font-weight: 600;
+
+    background-color: #3498db;
+    border: 1px solid #2980b9;
+    box-shadow: 0 6px 0 #2980b9;
+    border-radius: 5px;
+    color: #ecf0f1;
+    cursor: pointer;
+}
+
+div.bu button:active {
+    box-shadow: 0 2px 0 #2980b9;
+}
+
